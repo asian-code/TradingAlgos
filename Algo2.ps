@@ -1,0 +1,59 @@
+//@version=5
+strategy('Template', overlay=true,initial_capital = 1000)
+//---Logic-------------
+//Enter/exit trade when stoch crossover in overbought/oversold levels
+//Trend/filter- 50 EMA
+//Exit - Supertrend or ATR?
+
+//        What if distance between price and ema is close, dont trade?
+//---Issues-------------
+//
+//
+//
+
+
+//---Backend----------------------------
+
+slowEMA50 = request.security(syminfo.tickerid, "15", ta.ema(close, 50))
+plot(slowEMA50,color=color.rgb(248, 166, 73))
+
+
+//---Conditions----------------------------
+
+Sideways=haHigh != haClose and haLow != haOpen
+isUp=haOpen < haClose 
+isDown=haOpen >= haClose
+
+BuyExitSignal = ta.crossunder(close, EMA50)
+SellExitSignal =ta.crossover(close, EMA50)
+
+BuySignal = ta.crossover(fast, slow) 
+SellSignal = ta.crossunder(fast, slow) 
+//---BG coloring-------------------------------------
+bgcolor(color=isUp ? color.rgb(76, 175, 79, 90): color.rgb(255, 82, 82, 90))
+//---Exit----------------------------
+
+if BuyExitSignal and strategy.position_size > 0 // close if long
+    strategy.close_all()
+if SellExitSignal and strategy.position_size < 0 // close if short
+    strategy.close_all()
+
+//plotshape((strategy.position_size != strategy.position_size[1]) and changeCond, style=shape.square, location=location.abovebar, color=color.yellow, size=size.large)
+
+//---Long----------------------------
+if slowBuySignal and isUp
+    strategy.entry('LONG', strategy.long)
+    //strategy.exit("exit", "LONG", limit = stoplossSellPrice*2)//take profit
+    //strategy.exit("Stoploss", "LONG", stop = stoplossBuyPrice)//stoploss
+//plotshape(emabuySignal and trend == 1, style=shape.triangleup, location=location.abovebar, color=color.green, size=size.small)
+
+//---Short----------------------------
+if slowSellSignal and isDown
+    strategy.entry('SHORT', strategy.short)
+    //strategy.exit("exit", "LONG", limit = stoplossBuyPrice*2)//take profit
+    //strategy.exit("Stoploss", "SHORT", stop = stoplossSellPrice)//stoploss
+//plotshape(emasellSignal and trend == -1, style=shape.xcross, location=location.abovebar, color=color.red, size=size.normal)
+
+        
+//current_candle= strategy.position_size !=0 ? color.green : na // if active position= color.green
+//barcolor(color =current_candle)

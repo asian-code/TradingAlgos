@@ -1,0 +1,66 @@
+//@version=5
+// VERSION 5
+strategy('Mystrat', overlay=true,initial_capital = 1000)
+//EMAs
+ema20 = ta.ema(close, 20)
+ema50 = ta.ema(close, 50)
+plot(ema20,color = color.rgb(78, 220, 255))
+plot(ema50,color = color.rgb(248, 166, 73))
+
+//other time frame 
+res = input.timeframe('D', "Resolution", options=['D', 'W', 'M'])
+trendmaster = request.security(syminfo.tickerid, res, ta.ema(close, 20))
+plot(trendmaster)
+// MACD Indicator Inputs
+fastLength = input(title='Fast Length', defval=12)
+slowLength = input(title='Slow Length', defval=26)
+signalLength = input(title='Signal Length', defval=9)
+// MACD Indicator Calculations
+macdLine = ta.ema(close, fastLength) - ta.ema(close, slowLength)
+signalLine = ta.ema(macdLine, signalLength)
+macdHist = macdLine - signalLine
+//ATR
+length = input.int(title="Length", defval=14, minval=1)
+smoothing = input.string(title="Smoothing", defval="RMA", options=["RMA", "SMA", "EMA", "WMA"])
+ma_function(source, length) =>
+	switch smoothing
+		"RMA" => ta.rma(source, length)
+		"SMA" => ta.sma(source, length)
+		"EMA" => ta.ema(source, length)
+		=> ta.wma(source, length)
+//plot(ma_function(ta.tr(true), length), title = "ATR", color=color.new(#B71C1C, 0))
+
+// Condition 1: MACD Histogram above zero
+macdAboveZero = macdHist > 0
+emabuySignal = ta.crossover(ema20, ema50)
+emasellSignal = ta.crossunder(ema20, ema50)
+
+MACDSellExit = ta.crossover(macdLine, signalLine)
+
+
+MACDBuyExit = ta.crossunder(macdLine, signalLine)
+isUp=close>trendmaster
+isDown=close<trendmaster
+
+
+//----------------------------------------
+
+bgcolor(color=isUp ? color.rgb(76, 175, 79, 90): color.rgb(255, 82, 82, 90))
+
+//-----------------------------------------
+
+//if strategy.position_size != 0
+if MACDSellExit or MACDBuyExit
+    if strategy.position_size !=0//checks if there is current trade
+        strategy.close_all()
+//plotshape((strategy.position_size != strategy.position_size[1]) and changeCond, style=shape.square, location=location.abovebar, color=color.yellow, size=size.large)
+// Long Entry 
+if emabuySignal and isUp
+    strategy.entry('LONG', strategy.long)
+//plotshape(emabuySignal and trend == 1, style=shape.triangleup, location=location.abovebar, color=color.green, size=size.small)
+
+if emasellSignal and isDown
+    strategy.entry('SHORT', strategy.short)
+//plotshape(emasellSignal and trend == -1, style=shape.xcross, location=location.abovebar, color=color.red, size=size.normal)
+current_candle= strategy.position_size !=0 ? color.green : color.black // if active position= color.green
+barcolor(color =current_candle)
