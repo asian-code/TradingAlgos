@@ -7,9 +7,9 @@ strategy('4H:190% netprofit, 62% winrate, 6.5 profit factor, 1.5 avgTrade', over
 //exit if price crosses dynamic stoploss-  50 EMA
 
 //---Issues-------------
-//lots of trades during sideways movement
-//Trend detection is not as good. EMA is better at trade
-//Need to not trade during sideways movement
+//lots of trades during sideways movement- need sideways filter
+//Trend detection is not as good. EMA is better at trend
+
 
 //---Backend----------------------------
 //Stochastic RSI------------------------------------
@@ -39,8 +39,8 @@ fivep=(haHigh-haLow)*.3
 UpSideways= (haOpen - haLow) > fivep and (haHigh - haClose) >fivep 
 DownSideways= (haClose - haLow)> fivep and (haHigh- haOpen) >fivep
 Sideways=haHigh != haClose and haLow != haOpen
-//isUp=haOpen < haClose 
-//isDown=haOpen >= haClose
+isUp=haOpen < haClose 
+isDown=haOpen >= haClose
 
 BuyExitSignal = ta.crossunder(close, EMA50)
 SellExitSignal =ta.crossover(close, EMA50)
@@ -48,8 +48,8 @@ SellExitSignal =ta.crossover(close, EMA50)
 // SellSignal = ta.crossunder(fast, slow) and fast > 80
 BuySignal = ta.crossover(fast, slow) 
 SellSignal = ta.crossunder(fast, slow) 
-isUp=close>EMA50
-isDown=close<EMA50
+// isUp=close>EMA50
+// isDown=close<EMA50
 
 //---BG coloring-------------------------------------
 bgcolor(color=isDown ? color.rgb(255, 82, 82, 80):na)
