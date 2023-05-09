@@ -3,8 +3,8 @@ strategy('Template', overlay=true,initial_capital = 1000)
 //---Logic-------------
 //Enter/exit trade when stoch crossover in overbought/oversold levels
 //Trend/filter- 50 EMA
-//Exit - Supertrend or ATR?
-
+//Exit - Supertrend
+//stoploss - ATR
 //        What if distance between price and ema is close, dont trade?
 //---Issues-------------
 //
@@ -14,10 +14,18 @@ strategy('Template', overlay=true,initial_capital = 1000)
 
 //---Backend----------------------------
 
-slowEMA50 = request.security(syminfo.tickerid, "15", ta.ema(close, 50))
-plot(slowEMA50,color=color.rgb(248, 166, 73))
-
-
+//Stochastic RSI------------------------------------
+smoothK = input.int(3, "K", minval=1)
+smoothD = input.int(3, "D", minval=1)
+lengthRSI = input.int(14, "RSI Length", minval=1)
+lengthStoch = input.int(14, "Stochastic Length", minval=1)
+src = input(close, title="RSI Source")
+rsi1 = ta.rsi(src, lengthRSI)
+fast = ta.sma(ta.stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
+slow = ta.sma(fast, smoothD)
+//EMA------------------------------------
+EMA50 =ta.ema(close, 100)
+plot(EMA50,color=color.rgb(248, 166, 73))
 //---Conditions----------------------------
 
 Sideways=haHigh != haClose and haLow != haOpen
