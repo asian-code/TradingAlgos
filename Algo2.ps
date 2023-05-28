@@ -2,10 +2,9 @@
 strategy('Template', overlay=true,initial_capital = 1000)
 //---Logic-------------
 //Enter/exit trade when stoch crossover in overbought/oversold levels
-//Trend/filter- 50 EMA
-//Exit - Supertrend
-//stoploss - ATR
-//        What if distance between price and ema is close, dont trade?
+//Trend/filter- Check Kumo cloud on higher TF then zoom in 
+//stoploss - 200 ema (Entry TF)
+//        
 //---Issues-------------
 //
 //
@@ -21,45 +20,71 @@ lengthRSI = input.int(14, "RSI Length", minval=1)
 lengthStoch = input.int(14, "Stochastic Length", minval=1)
 src = input(close, title="RSI Source")
 rsi1 = ta.rsi(src, lengthRSI)
-fast = ta.sma(ta.stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
-slow = ta.sma(fast, smoothD)
-//EMA------------------------------------
-EMA50 =ta.ema(close, 100)
-plot(EMA50,color=color.rgb(248, 166, 73))
+StochRSI_fast = ta.sma(ta.stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
+StochRSI_slow = ta.sma(StochRSI_fast, smoothD)
+//Kumo Cloud------------------------------------
+// Inputs
+conversionPeriods = input.int(9, minval=1, title="Conversion Line Periods")
+basePeriods = input.int(26, minval=1, title="Base Line Periods")
+laggingSpan2Periods = input.int(52, minval=1, title="Lagging Span 2 Periods")
+displacement = input.int(26, minval=1, title="Displacement")
+
+// Calculations
+donchian(len) => math.avg(ta.highest(len), ta.lowest(len))
+conversionLine = donchian(conversionPeriods)
+baseLine = donchian(basePeriods)
+spanA = math.avg(conversionLine, baseLine)
+spanB = donchian(laggingSpan2Periods)
+
+// Plotting
+plot(conversionLine, color=color.blue, title="Conversion Line")
+plot(baseLine, color=color.red, title="Base Line")
+//plot(close, offset = -displacement, color=color.black, title="Lagging Span")
+p1 = plot(spanA, offset = displacement, color=color.green, title="Span A")
+p2 = plot(spanB, offset = displacement, color=color.red, title="Span B")
+fill(p1, p2, color = spanA > spanB ? color.new(color.green, 80) : color.new(color.red, 80), title="Kumo Cloud")
+//ATR--------------------------------
+length = input.int(14, "ATR Length")
+multiplier = input.float(2.0, "ATR Multiplier")
+atr = ta.atr(length)
+upperATR_price = close + multiplier * atr
+lowerATR_price = close - multiplier * atr
+//plot(upperATR_price, "Upper Band", color=color.green)
+//plot(lowerATR_price, "Lower Band", color=color.red)
 //---Conditions----------------------------
 
-Sideways=haHigh != haClose and haLow != haOpen
-isUp=haOpen < haClose 
-isDown=haOpen >= haClose
+//Sideways=
+isUp=close > spanA and close > spanB and close > baseLine
+isDown=close < spanA and close < spanB and close < baseLine
 
-BuyExitSignal = ta.crossunder(close, EMA50)
-SellExitSignal =ta.crossover(close, EMA50)
+//BuyExitSignal = ta.crossunder(close, EMA50)
+//SellExitSignal =ta.crossover(close, EMA50)
 
-BuySignal = ta.crossover(fast, slow) 
-SellSignal = ta.crossunder(fast, slow) 
+BuySignal = ta.crossover(StochRSI_fast, StochRSI_slow) 
+SellSignal = ta.crossunder(StochRSI_fast, StochRSI_slow) 
 //---BG coloring-------------------------------------
-bgcolor(color=isUp ? color.rgb(76, 175, 79, 90): color.rgb(255, 82, 82, 90))
+bgcolor(color=isUp ? color.rgb(76, 175, 79, 90): isDown ? color.rgb(255, 82, 82, 90):na)
 //---Exit----------------------------
 
-if BuyExitSignal and strategy.position_size > 0 // close if long
-    strategy.close_all()
-if SellExitSignal and strategy.position_size < 0 // close if short
-    strategy.close_all()
+//if BuyExitSignal and strategy.position_size > 0 // close if long
+//    strategy.close_all()
+//if SellExitSignal and strategy.position_size < 0 // close if short
+//    strategy.close_all()
 
 //plotshape((strategy.position_size != strategy.position_size[1]) and changeCond, style=shape.square, location=location.abovebar, color=color.yellow, size=size.large)
 
 //---Long----------------------------
-if slowBuySignal and isUp
+if BuySignal and isUp
     strategy.entry('LONG', strategy.long)
     //strategy.exit("exit", "LONG", limit = stoplossSellPrice*2)//take profit
-    //strategy.exit("Stoploss", "LONG", stop = stoplossBuyPrice)//stoploss
+    strategy.exit("Stoploss", "LONG", stop = lowerATR_price)//stoploss
 //plotshape(emabuySignal and trend == 1, style=shape.triangleup, location=location.abovebar, color=color.green, size=size.small)
 
 //---Short----------------------------
-if slowSellSignal and isDown
+if SellSignal and isDown
     strategy.entry('SHORT', strategy.short)
     //strategy.exit("exit", "LONG", limit = stoplossBuyPrice*2)//take profit
-    //strategy.exit("Stoploss", "SHORT", stop = stoplossSellPrice)//stoploss
+    strategy.exit("Stoploss", "SHORT", stop = upperATR_price)//stoploss
 //plotshape(emasellSignal and trend == -1, style=shape.xcross, location=location.abovebar, color=color.red, size=size.normal)
 
         
