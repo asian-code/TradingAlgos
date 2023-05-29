@@ -1,9 +1,9 @@
 //@version=5
-strategy('Template', overlay=true,initial_capital = 1000)
+strategy('Stoch cross/Kumo cloud/1min 220 ema stoploss', overlay=true,initial_capital = 1000)
 //---Logic-------------
 //Enter/exit trade when stoch crossover in overbought/oversold levels
-//Trend/filter- Check Kumo cloud on higher TF then zoom in 
-//stoploss - 200 ema (Entry TF)
+//Trend/filter- Kumo cloud
+//stoploss - ATR
 //        
 //---Issues-------------
 //
@@ -12,7 +12,14 @@ strategy('Template', overlay=true,initial_capital = 1000)
 
 
 //---Backend----------------------------
+//200 ema stoploss ---------------------
+//ema200 = ta.ema(close, 200)
 
+// Reference the 1 minute timeframe data
+ema200_1m = request.security(syminfo.tickerid, "1", ta.ema(close, 220))
+
+// Plot the ema line on the chart
+plot(ema200_1m, color=color.purple)
 //Stochastic RSI------------------------------------
 smoothK = input.int(3, "K", minval=1)
 smoothD = input.int(3, "D", minval=1)
@@ -29,62 +36,79 @@ basePeriods = input.int(26, minval=1, title="Base Line Periods")
 laggingSpan2Periods = input.int(52, minval=1, title="Lagging Span 2 Periods")
 displacement = input.int(26, minval=1, title="Displacement")
 
-// Calculations
+// Calculations for higher TF (1h)
 donchian(len) => math.avg(ta.highest(len), ta.lowest(len))
 conversionLine = donchian(conversionPeriods)
 baseLine = donchian(basePeriods)
 spanA = math.avg(conversionLine, baseLine)
 spanB = donchian(laggingSpan2Periods)
 
+Highertimeframe="60"
+conversionLine_1h= request.security(syminfo.tickerid, Highertimeframe, conversionLine)
+baseLine_1h =request.security(syminfo.tickerid, Highertimeframe, baseLine)
+spanA_1h=request.security(syminfo.tickerid, Highertimeframe, spanA)
+spanB_1h=request.security(syminfo.tickerid, Highertimeframe, spanB)
 // Plotting
-plot(conversionLine, color=color.blue, title="Conversion Line")
-plot(baseLine, color=color.red, title="Base Line")
+//plot(conversionLine, color=color.blue, title="Conversion Line")
+//plot(baseLine, color=color.red, title="Base Line")
 //plot(close, offset = -displacement, color=color.black, title="Lagging Span")
 p1 = plot(spanA, offset = displacement, color=color.green, title="Span A")
 p2 = plot(spanB, offset = displacement, color=color.red, title="Span B")
 fill(p1, p2, color = spanA > spanB ? color.new(color.green, 80) : color.new(color.red, 80), title="Kumo Cloud")
 //ATR--------------------------------
-length = input.int(14, "ATR Length")
-multiplier = input.float(2.0, "ATR Multiplier")
-atr = ta.atr(length)
-upperATR_price = close + multiplier * atr
-lowerATR_price = close - multiplier * atr
+// length = input.int(14, "ATR Length")
+// multiplier = input.float(2.0, "ATR Multiplier")
+// atr = ta.atr(length)
+// upperATR_price = close + multiplier * atr
+// lowerATR_price = close - multiplier * atr
 //plot(upperATR_price, "Upper Band", color=color.green)
 //plot(lowerATR_price, "Lower Band", color=color.red)
+
+
 //---Conditions----------------------------
+isUp=(close > spanA[displacement] and close > spanB[displacement])
+isDown=(close < spanA[displacement] and close < spanB[displacement])
 
-//Sideways=
-isUp=close > spanA and close > spanB and close > baseLine
-isDown=close < spanA and close < spanB and close < baseLine
+HighTF_isUp=(close > spanA_1h[displacement] and close > spanB_1h[displacement]) //and close > baseLine_1h //above kumo and baseline
+HighTF_isDown=(close < spanA_1h[displacement] and close < spanB_1h[displacement]) //and close < baseLine_1h //Under Kumo and baseline
 
-//BuyExitSignal = ta.crossunder(close, EMA50)
-//SellExitSignal =ta.crossover(close, EMA50)
+trend=0
+if isUp and HighTF_isUp
+    trend:=1
+else if isDown and HighTF_isDown
+    trend:=-1
+else
+    trend:=0
+//isSideways=(close > spanB_1h[displacement] and close < spanA_1h[displacement]) or (close < spanB_1h[displacement] and close > spanA_1h[displacement]) //if price = inside the kumo
+
+BuyExitSignal = ta.crossunder(close, ema200_1m)
+SellExitSignal =ta.crossover(close, ema200_1m)
 
 BuySignal = ta.crossover(StochRSI_fast, StochRSI_slow) 
 SellSignal = ta.crossunder(StochRSI_fast, StochRSI_slow) 
 //---BG coloring-------------------------------------
-bgcolor(color=isUp ? color.rgb(76, 175, 79, 90): isDown ? color.rgb(255, 82, 82, 90):na)
+bgcolor(color= trend==1 ? color.rgb(76, 175, 79, 90): trend==-1 ? color.rgb(255, 82, 82, 90): trend==0 ? color.rgb(255, 255, 255, 64) : na)
 //---Exit----------------------------
-
-//if BuyExitSignal and strategy.position_size > 0 // close if long
-//    strategy.close_all()
-//if SellExitSignal and strategy.position_size < 0 // close if short
-//    strategy.close_all()
+//BuyExitSignal or trend==0
+if (BuyExitSignal) and strategy.position_size > 0 // close if long
+    strategy.close_all()
+if (SellExitSignal) and strategy.position_size < 0 // close if short
+    strategy.close_all()
 
 //plotshape((strategy.position_size != strategy.position_size[1]) and changeCond, style=shape.square, location=location.abovebar, color=color.yellow, size=size.large)
 
 //---Long----------------------------
-if BuySignal and isUp
+if BuySignal and trend==1 and session.ismarket //and not isSideways
     strategy.entry('LONG', strategy.long)
     //strategy.exit("exit", "LONG", limit = stoplossSellPrice*2)//take profit
-    strategy.exit("Stoploss", "LONG", stop = lowerATR_price)//stoploss
+    //strategy.exit("Stoploss", "LONG", stop = ATRTrailingStop)//stoploss
 //plotshape(emabuySignal and trend == 1, style=shape.triangleup, location=location.abovebar, color=color.green, size=size.small)
 
 //---Short----------------------------
-if SellSignal and isDown
+if SellSignal and trend==-1 and session.ismarket//and not isSideways
     strategy.entry('SHORT', strategy.short)
     //strategy.exit("exit", "LONG", limit = stoplossBuyPrice*2)//take profit
-    strategy.exit("Stoploss", "SHORT", stop = upperATR_price)//stoploss
+    //strategy.exit("Stoploss", "SHORT", stop = ATRTrailingStop)//stoploss
 //plotshape(emasellSignal and trend == -1, style=shape.xcross, location=location.abovebar, color=color.red, size=size.normal)
 
         
