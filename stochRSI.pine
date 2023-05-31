@@ -1,0 +1,43 @@
+//@version=5
+indicator("Stoch RSI with SMA", overlay=false)
+
+// Input parameters
+rsiLength = input.int(14, "RSI Length", minval=1)
+stochLength = input.int(14, "Stochastic Length", minval=1)
+kSmooth = input.int(3, "K Smooth", minval=1)
+dSmooth = input.int(3, "D Smooth", minval=1)
+smaLength = input.int(3, "SMA Length", minval=1)
+overBought = input.float(80, "Overbought Level", maxval=100)
+overSold = input.float(20, "Oversold Level", maxval=100)
+
+// Calculate RSI
+rsi = ta.rsi(close, rsiLength)
+
+// Calculate Stoch RSI
+lowestLow = ta.lowest(rsi, stochLength)
+highestHigh = ta.highest(rsi, stochLength)
+stochRsi = 100 * (rsi - lowestLow) / (highestHigh - lowestLow)
+
+// Calculate K and D lines
+k = ta.sma(stochRsi, kSmooth)
+d = ta.sma(k, dSmooth)
+
+// Calculate SMA
+sma = ta.sma(stochRsi, smaLength)
+
+// Plot Stoch RSI and SMA
+plot(k, "K", color.blue)
+plot(d, "D", color.orange)
+plot(sma, "SMA", color.purple)
+
+// Plot overbought and oversold levels
+hline(overBought, "Overbought", color.red)
+hline(overSold, "Oversold", color.green)
+
+// Generate buy and sell signals
+buySignal = ta.crossover(k, sma) and k < overSold
+sellSignal = ta.crossunder(k, sma) and k > overBought
+
+// Plot buy and sell arrows
+plotshape(buySignal, style=shape.triangleup, location=location.bottom, color=color.lime, size=size.small)
+plotshape(sellSignal, style=shape.triangledown, location=location.top, color=color.red, size=size.small)
