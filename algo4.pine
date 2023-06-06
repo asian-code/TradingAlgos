@@ -1,12 +1,14 @@
 //@version=5
 strategy('Stoch cross/mtf ema trend/1min 220 ema stoploss', overlay=true,initial_capital = 1000,process_orders_on_close = true)
 //---Logic-------------
-//Enter/exit trade when stoch crossover in overbought/oversold levels
-//Trend/filter- ema
+//Trend - if ltf and htf match, trade confimred
+//Entry - Stoch crossover above/below 50 level on 15 min tf
+//Exit - 1 min 300 ema
+//Stoploss - 2.5x ATR on entry
 
   
 //---Issues-------------
-//
+//Stoch sucks for entries (not ideal entries at all)
 //
 //
 
@@ -17,20 +19,24 @@ EMAsetting=input.int(300, "EMA setting", minval=1)
 Highertimeframe="15"
 //ctrend=request.security(syminfo.tickerid, "5",ta.ema(close, EMAsetting))
 htfTrend=request.security(syminfo.tickerid, Highertimeframe,ta.ema(close, EMAsetting))
-ema200_1m = request.security(syminfo.tickerid, "1", ta.ema(close, EMAsetting))
+ltf_ema200 = request.security(syminfo.tickerid, "1", ta.ema(close, EMAsetting))
 
-isUp=(request.security(syminfo.tickerid, "1", close) > ema200_1m)
-isDown=(request.security(syminfo.tickerid, "1", close) < ema200_1m)
+isUp=(request.security(syminfo.tickerid, "1", close) > ltf_ema200)
+isDown=(request.security(syminfo.tickerid, "1", close) < ltf_ema200)
 
 HighTF_isUp=(close > htfTrend)
 HighTF_isDown=(close < htfTrend)
 
-plot(ema200_1m, color=color.purple)
+plot(ltf_ema200, color=color.purple)
 //plot(ctrend, color=color.blue)
 plot(htfTrend, color=color.orange)
+//ATR ------------------------
+atrLength = input.int(14, "ATR Length")
+atrMultiplier = input.float(2.5, "ATR Multiplier")
+atr = ta.atr(atrLength)
 //STOCH RSI------------------------------
-overBought = input.float(70, "Overbought Level", maxval=100)
-overSold = input.float(30, "Oversold Level", maxval=100)
+//overBought = input.float(70, "Overbought Level", maxval=100)
+//overSold = input.float(30, "Oversold Level", maxval=100)
 smoothK = input.int(3, "K", minval=1)
 smoothD = input.int(3, "D", minval=1)
 lengthRSI = input.int(14, "RSI Length", minval=1)
@@ -40,23 +46,24 @@ rsi1 = ta.rsi(src, lengthRSI)
 k = ta.sma(ta.stoch(rsi1, rsi1, rsi1, lengthStoch), smoothK)
 d = ta.sma(k, smoothD)
 // Generate buy and sell signals
-BuySignal = ta.crossover(k, d) and k < overSold
-SellSignal = ta.crossunder(k, d) and k > overBought
+BuySignal = ta.crossover(k, d) and k < 50
+SellSignal = ta.crossunder(k, d) and k > 50
 //---Conditions----------------------------
 
 trend=0
-if (isUp)// and HighTF_isUp)
+if (isUp and HighTF_isUp)
     trend:=1
-else if (isDown)// and HighTF_isDown)
+else if (isDown and HighTF_isDown)
     trend:=-1
 else
     trend:=0
 
-BuyExitSignal = ta.crossunder(close, ema200_1m)
-SellExitSignal =ta.crossover(close, ema200_1m)
+BuyExitSignal = ta.crossunder(close, ltf_ema200)
+SellExitSignal =ta.crossover(close, ltf_ema200)
 
 //---BG coloring-------------------------------------
-bgcolor(color= trend==1 ? color.rgb(76, 175, 79, 90): trend==-1 ? color.rgb(255, 82, 82, 90): trend==0 ? color.rgb(0, 0, 0, 50) : na)
+bgcolor(color= trend==1 ? color.rgb(76, 175, 79, 95): trend==-1 ? color.rgb(255, 82, 82, 95): trend==0 ? color.rgb(0, 0, 0, 50) : na)
+
 //---Exit----------------------------
 if (BuyExitSignal and strategy.position_size > 0) // close if long
     strategy.close_all()
@@ -66,7 +73,10 @@ if (SellExitSignal and strategy.position_size < 0) // close if short
 //---Long----------------------------
 if (BuySignal and trend==1)
     strategy.entry('LONG', strategy.long)
- 
+
 //---Short----------------------------
 if (SellSignal and trend==-1)
     strategy.entry('SHORT', strategy.short)
+
+strategy.exit("Exit Long", from_entry="LONG", stop=close - atr * atrMultiplier)
+strategy.exit("Exit Short", from_entry="SHORT", stop=close + atr * atrMultiplier)

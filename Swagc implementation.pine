@@ -1,0 +1,64 @@
+//@version=5
+strategy('SC implementation', overlay=true,initial_capital = 1000,process_orders_on_close = true)
+//---Logic-------------
+
+// TO DO
+// create crossover Alerts with his indicator
+//create price crossover alerts
+//plot triangle on crossovers
+// have little label near price indicating direction of trend based on crossover
+
+
+//---Backend----------------------------
+//EMA---------------------
+EMAsetting=input.int(300, "EMA setting", minval=1)
+Highertimeframe="15"
+
+8_ema=ta.ema(close, "8")
+14_ema=ta.ema(close, "14")
+20_ema=ta.ema(close, "20")
+50_ema=ta.ema(close, "50")
+htfTrend=request.security(syminfo.tickerid, Highertimeframe,ta.ema(close, EMAsetting))
+
+//Conditions ------------------
+isUp=close > ltf_ema200
+isDown=close < ltf_ema200
+
+HighTF_isUp=(close > htfTrend)
+HighTF_isDown=(close < htfTrend)
+
+plot(8_ema, color=color.green)
+plot(14_ema, color=color.purple)
+plot(20_ema, color=color.blue)
+plot(50_ema, color=color.orange)
+plot(ltf_ema200, color=color.white)
+
+//---Conditions----------------------------
+
+trend=0
+if (HighTF_isUp)
+    trend:=1
+else if (HighTF_isDown)
+    trend:=-1
+else
+    trend:=0
+
+BuyExitSignal = ta.crossunder(close, ltf_ema200)
+SellExitSignal =ta.crossover(close, ltf_ema200)
+
+//---BG coloring-------------------------------------
+bgcolor(color= trend==1 ? color.rgb(76, 175, 79, 95): trend==-1 ? color.rgb(255, 82, 82, 95): trend==0 ? color.rgb(0, 0, 0, 50) : na)
+
+//---Exit----------------------------
+if (BuyExitSignal and strategy.position_size > 0) // close if long
+    strategy.close_all()
+if (SellExitSignal and strategy.position_size < 0) // close if short
+    strategy.close_all()
+
+//---Long----------------------------
+if (BuySignal and trend==1)
+    strategy.entry('LONG', strategy.long)
+
+//---Short----------------------------
+if (SellSignal and trend==-1)
+    strategy.entry('SHORT', strategy.short)
