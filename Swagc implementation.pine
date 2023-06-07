@@ -10,10 +10,13 @@ strategy('SC implementation', overlay=true,initial_capital = 1000,process_orders
 // TO DO
 // create crossover Alerts with his indicator
 //create price crossover alerts
-//plot triangle on crossovers
 // have little label near price indicating direction of trend based on crossover
-//hide the 8 and 14 ema, only use to cal plotting arrow
 
+
+
+//------------------
+//plot triangle on crossovers
+//hide the 8 and 14 ema, only use to cal plotting arrow
 //---Backend----------------------------
 //EMA---------------------
 EMAsetting=input.int(300, "EMA setting", minval=1)
@@ -52,8 +55,13 @@ else
     trend:=0
 
 //Alerts ------------------
-alertcondition(crossover, title="entry to the upside", message="8 + 14 ema crossover")
+alertcondition(crossover, title="Long entry", message="8 + 14 ema crossover")
+alertcondition(crossunder, title="Short entry", message="8 + 14 ema crossover")
+alertcondition(ta.crossover(ema20, ema50), title="Long entry", message="20 + 50 ema crossover")
+alertcondition(ta.crossunder(ema20, ema50), title="Short entry", message="20 + 50 ema crossover")
 
+alertcondition(close>ema20, title="Price crossed the 20 ema", message="Price cross 20 ema")
+alertcondition(close>ema20, title="Price crossed the 50 ema", message="Price cross 50 ema")
 //---BG coloring-------------------------------------
 bgcolor(color= trend==1 ? color.rgb(76, 175, 79, 95): trend==-1 ? color.rgb(255, 82, 82, 95): trend==0 ? color.rgb(0, 0, 0, 50) : na)
 
