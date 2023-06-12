@@ -1,5 +1,6 @@
 //@version=5
-strategy('SC implementation', overlay=true,initial_capital = 1000,process_orders_on_close = true)
+indicator('SC implementation', overlay=true)
+
 //---Logic-------------
 //8+14 ema for entries
 //20+50 for trend direction
@@ -55,13 +56,11 @@ else
     trend:=0
 
 //Alerts ------------------
-alertcondition(crossover, title="Long entry", message="8 + 14 ema crossover")
-alertcondition(crossunder, title="Short entry", message="8 + 14 ema crossover")
-alertcondition(ta.crossover(ema20, ema50), title="Long entry", message="20 + 50 ema crossover")
-alertcondition(ta.crossunder(ema20, ema50), title="Short entry", message="20 + 50 ema crossover")
+alertcondition(crossover or crossunder, title="8 + 14 ema crossover", message="8 + 14 ema crossover")
+alertcondition(ta.crossover(ema20, ema50) or ta.crossunder(ema20, ema50), title="20 + 50 ema crossover", message="20 + 50 ema crossover")
 
-alertcondition(close>ema20, title="Price crossed the 20 ema", message="Price cross 20 ema")
-alertcondition(close>ema20, title="Price crossed the 50 ema", message="Price cross 50 ema")
+alertcondition(close>ema20 or close<ema20, title="Price crossed the 20 ema", message="Price cross 20 ema")
+alertcondition(close>ema50 or close<ema50, title="Price crossed the 50 ema", message="Price cross 50 ema")
 //---BG coloring-------------------------------------
 bgcolor(color= trend==1 ? color.rgb(76, 175, 79, 95): trend==-1 ? color.rgb(255, 82, 82, 95): trend==0 ? color.rgb(0, 0, 0, 50) : na)
 
