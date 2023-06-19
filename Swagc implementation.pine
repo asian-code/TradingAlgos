@@ -29,6 +29,9 @@ ema20=ta.ema(close, 20)
 ema50=ta.ema(close, 50)
 htfTrend=request.security(syminfo.tickerid, Highertimeframe,ta.ema(close, EMAsetting))
 
+//Vwap 
+vwap = ta.vwap(hlc3)
+plot(vwap, color=color.purple, linewidth=2)
 //Conditions ------------------
 isUp=ema20>ema50
 isDown=ema20<ema50
@@ -62,7 +65,7 @@ alertcondition(ta.crossover(ema20, ema50) or ta.crossunder(ema20, ema50), title=
 alertcondition(ta.crossover(close, ema20) or ta.crossunder(close, ema20), title="Price crossed the 20 ema", message="     Price cross 20 ema")
 alertcondition(ta.crossover(close, ema50) or ta.crossunder(close, ema50), title="Price crossed the 50 ema", message="     Price cross 50 ema")
 //---BG coloring-------------------------------------
-bgcolor(color= trend==1 ? color.rgb(76, 175, 79, 95): trend==-1 ? color.rgb(255, 82, 82, 95): trend==0 ? color.rgb(0, 0, 0, 50) : na)
+//bgcolor(color= trend==1 ? color.rgb(76, 175, 79, 95): trend==-1 ? color.rgb(255, 82, 82, 95): trend==0 ? color.rgb(0, 0, 0, 50) : na)
 
 // //---Exit----------------------------
 // if (BuyExitSignal and strategy.position_size > 0) // close if long
