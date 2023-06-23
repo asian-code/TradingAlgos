@@ -21,6 +21,8 @@ indicator('SC implementation', overlay=true)
 //---Backend----------------------------
 //EMA---------------------
 EMAsetting=input.int(300, "EMA setting", minval=1)
+ema20Color = input.color(color.aqua, "20 EMA color")
+ema50Color = input.color(color.orange, "50 EMA color")
 Highertimeframe="15"
 
 ema8=ta.ema(close, 8)
@@ -29,9 +31,13 @@ ema20=ta.ema(close, 20)
 ema50=ta.ema(close, 50)
 htfTrend=request.security(syminfo.tickerid, Highertimeframe,ta.ema(close, EMAsetting))
 
-//Vwap 
+//Vwap ------------------
+vwapColor = input.color(color.purple, "Vwap color")
 vwap = ta.vwap(hlc3)
-plot(vwap, color=color.purple, linewidth=2)
+plot(vwap, color=vwapColor, linewidth=2)
+
+
+
 //Conditions ------------------
 isUp=ema20>ema50
 isDown=ema20<ema50
@@ -44,8 +50,8 @@ plotshape(crossover, style=shape.triangleup, location=location.belowbar, color=c
 plotshape(crossunder, style=shape.triangledown, location=location.abovebar, color=color.red, size=size.tiny)
 plotshape(ta.crossover(ema20, ema50), style=shape.triangleup, location=location.belowbar, color=color.rgb(255, 220, 64), size=size.small)
 plotshape(ta.crossunder(ema20, ema50), style=shape.triangledown, location=location.abovebar, color=color.rgb(255, 220, 64), size=size.small)
-plot(ema20, color=color.aqua)
-plot(ema50, color=color.orange)
+plot(ema20, color=ema20Color)
+plot(ema50, color=ema50Color)
 //plot(htfTrend, color=color.white)
 
 //---Conditions----------------------------
@@ -59,8 +65,8 @@ else
     trend:=0
 
 //Alerts ------------------
-alertcondition(crossover or crossunder, title="8 + 14 ema crossover", message="     8 + 14 ema crossover")
-alertcondition(ta.crossover(ema20, ema50) or ta.crossunder(ema20, ema50), title="     20 + 50 ema crossover", message="20 + 50 ema crossover")
+alertcondition(crossover or crossunder, title="8 + 14 ema crossover", message="   Entry crossover")
+alertcondition(ta.crossover(ema20, ema50) or ta.crossunder(ema20, ema50), title="     20 + 50 ema crossover", message="   trend crossover")
 
 alertcondition(ta.crossover(close, ema20) or ta.crossunder(close, ema20), title="Price crossed the 20 ema", message="     Price cross 20 ema")
 alertcondition(ta.crossover(close, ema50) or ta.crossunder(close, ema50), title="Price crossed the 50 ema", message="     Price cross 50 ema")
